@@ -69,7 +69,7 @@ jobs:
       - name: Save Terraform Plan Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: tfplan
+          name: tfplan-${{ github.ref_name }}
           path: tfplan
           retention-days: 7
 
@@ -143,10 +143,10 @@ jobs:
         with:
           terraform_version: 1.6.0
 
-      - name: Download Terraform Plan
+      - name: Download Terraform Plan from Last Successful Run
         uses: actions/download-artifact@v4
         with:
-          name: tfplan
+          name: tfplan-${{ github.ref_name }}
 
       - name: Terraform Init
         run: |
