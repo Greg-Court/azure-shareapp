@@ -75,9 +75,8 @@ jobs:
 
       - name: Create Plan String
         id: planstring
-        working-directory: terraform
         run: |
-          PLAN_CONTENT=$(terraform show -no-color prod.tfplan)
+          PLAN_CONTENT=$(terraform show -no-color tfplan)
 
           # Use a random delimiter so we don't prematurely close the output
           delimiter="$(openssl rand -hex 8)"
