@@ -116,9 +116,6 @@ jobs:
     needs: terraform-plan
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' # Only run manually
-
-    environment: ${{ github.ref == 'refs/heads/main' && 'prod-apply' || 'dev-apply' }}  # Manual gating
-
     env:
       TF_VAR_env: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
