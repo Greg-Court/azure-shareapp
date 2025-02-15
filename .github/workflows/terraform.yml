@@ -18,7 +18,6 @@ permissions:
 
 jobs:
   terraform-plan:
-    if: github.event_name != 'workflow_dispatch' # Only run on push or PR
     environment : ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
     runs-on: ubuntu-latest
     outputs:
@@ -114,7 +113,8 @@ jobs:
 
   terraform-apply:
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' # Only run manually
+    needs: terraform-plan
+    if: github.event_name == 'workflow_dispatch'
     environment : ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
     env:
       TF_VAR_env: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
