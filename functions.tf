@@ -62,13 +62,13 @@ resource "azapi_resource" "function_app" {
   schema_validation_enabled = false
   depends_on                = [azurerm_service_plan.functions_plan]
 
-  body = jsonencode({
+  # Provide a Terraform map/list object instead of a JSON string
+  body = {
     kind = "functionapp,linux"
     identity = {
       type = "SystemAssigned"
-    },
+    }
     properties = {
-      # Link to the Plan created above
       serverFarmId = azurerm_service_plan.functions_plan.id
 
       # Required: functionAppConfig for Flex Consumption
@@ -76,12 +76,11 @@ resource "azapi_resource" "function_app" {
         runtime = {
           name    = "node"
           version = "18"
-        },
+        }
         scaleAndConcurrency = {
           instanceMemoryMB     = 2048
           maximumInstanceCount = 3
-        },
-        # We'll reference your deployment container with SystemAssigned auth
+        }
         deployment = {
           storage = {
             type  = "blobContainer"
@@ -91,7 +90,7 @@ resource "azapi_resource" "function_app" {
             }
           }
         }
-      },
+      }
 
       # siteConfig is where we add environment variables (app settings)
       siteConfig = {
@@ -111,7 +110,7 @@ resource "azapi_resource" "function_app" {
         ]
       }
     }
-  })
+  }
 
   tags = {
     environment = var.env
@@ -119,14 +118,13 @@ resource "azapi_resource" "function_app" {
   }
 }
 
-# 8) Role Assignment: let the function app identity read the blob container
 resource "azurerm_role_assignment" "allow_blob_access" {
   scope                = azurerm_storage_account.func.id
   role_definition_name = "Storage Blob Data Owner"
-  principal_id         = jsondecode(azapi_resource.function_app.output)["identity"]["principalId"]
+
+  principal_id = jsondecode(azapi_resource.function_app.output)["identity"]["principalId"]
 }
 
 locals {
-  # parse the function hostname from our azapi resource
   function_app_hostname = jsondecode(azapi_resource.function_app.output)["properties"]["defaultHostName"]
 }
