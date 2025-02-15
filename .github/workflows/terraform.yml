@@ -113,7 +113,6 @@ jobs:
             })
 
   terraform-apply:
-    needs: terraform-plan
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' # Only run manually
     environment : ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
