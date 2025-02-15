@@ -1,7 +1,3 @@
-##################################################
-# Event Grid Setup (For Storage or Defender events)
-##################################################
-
 resource "azurerm_eventgrid_system_topic" "storage_topic" {
   name                   = "egt-storage-${var.project_name}-${var.env}-01"
   location               = var.location

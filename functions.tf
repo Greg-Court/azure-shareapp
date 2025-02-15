@@ -25,7 +25,6 @@ resource "azurerm_service_plan" "functions_plan" {
   tags                = var.tags
 }
 
-# 3) Storage Account (for function code + azurewebjobsstorage)
 resource "azurerm_storage_account" "func" {
   name                     = "stfunc${var.project_name}${var.env}${var.loc}01"
   resource_group_name      = azurerm_resource_group.main.name
@@ -36,7 +35,6 @@ resource "azurerm_storage_account" "func" {
   public_network_access_enabled = true # temp
 
   network_rules {
-    # If you want to lock down further, set default_action = "Deny"
     default_action = "Deny"
     bypass         = ["AzureServices"]
     ip_rules       = [local.my_public_ip]
@@ -51,14 +49,12 @@ resource "azurerm_storage_account" "func" {
   }
 }
 
-# 4) A container to hold the function code deployment package (optional)
 resource "azurerm_storage_container" "deploy_container" {
   name                  = "deploymentpackage"
   storage_account_name  = azurerm_storage_account.func.name
   container_access_type = "private"
 }
 
-# 7) Create the FLEX CONSUMPTION FUNCTION APP via AZAPI
 resource "azapi_resource" "function_app" {
   type                      = "Microsoft.Web/sites@2023-12-01"
   name                      = "func-${var.project_name}-${var.env}-${var.loc}-01"
@@ -67,7 +63,6 @@ resource "azapi_resource" "function_app" {
   schema_validation_enabled = false
   depends_on                = [azurerm_service_plan.functions_plan]
 
-  # Provide a Terraform map/list object instead of a JSON string
   body = {
     kind = "functionapp,linux"
     identity = {
@@ -76,7 +71,6 @@ resource "azapi_resource" "function_app" {
     properties = {
       serverFarmId = azurerm_service_plan.functions_plan.id
 
-      # Required: functionAppConfig for Flex Consumption
       functionAppConfig = {
         runtime = {
           name    = "node"
