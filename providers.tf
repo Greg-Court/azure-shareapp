@@ -1,9 +1,7 @@
 terraform {
   backend "azurerm" {
-    resource_group_name  = "rg-mgmt-uks-01"
     storage_account_name = "sagregmgmtuks01"
-    container_name       = "tfstate"
-    key                  = "fileshare-dev.tfstate"
+    use_azuread_auth     = true
   }
 
   required_version = ">= 1.3.0"
@@ -25,7 +23,6 @@ terraform {
 
 provider "azurerm" {
   features {}
-  subscription_id = "1e657656-e544-4315-8799-7c680936d1d0"
 }
 
 provider "azuread" {}
