@@ -18,11 +18,10 @@ permissions:
 
 jobs:
   terraform-plan:
+    environment : ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
     runs-on: ubuntu-latest
-
     outputs:
       plan-exitcode: ${{ steps.tf-plan.outputs.exitcode }}
-
     env:
       TF_VAR_env: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -117,7 +116,8 @@ jobs:
   terraform-apply:
     needs: terraform-plan
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' # Only run manually
+    if: github.event_name == 'workflow_dispatch' # Only run manuallyn
+    environment : ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
     env:
       TF_VAR_env: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
