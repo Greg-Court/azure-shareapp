@@ -5,14 +5,34 @@ on:
     branches:
       - main
       - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+  workflow_dispatch: # allows manual triggers
 
 jobs:
-  terraform:
+  terraform-plan:
     runs-on: ubuntu-latest
 
+    # We'll store plan exit code, plan artifact name, etc. as outputs
+    outputs:
+      plan-exitcode: ${{ steps.tf-plan.outputs.exitcode }}
+
     steps:
-      - name: Checkout Repository
+      - name: Check out code
         uses: actions/checkout@v4
+
+      # Optional: If you are using Azure resources and want OIDC:
+      - name: Azure Login (OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          enable-oidc: true
+          # For personal repos, ensure you have configured an Azure Federated Identity Credential
+          # See: https://learn.microsoft.com/azure/developer/github/connect-from-azure?tabs=azure-portal%2Clinux
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
@@ -26,12 +46,111 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
-        run: terraform plan -var="env=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}"
+        id: tf-plan
+        run: |
+          # We do a "detailed exitcode" plan so that:
+          #  - 0 => No changes
+          #  - 2 => Changes
+          #  - 1 => Failure
+          exitcode=0
+          terraform plan -detailed-exitcode -no-color -out=tfplan -var="env=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}" || exitcode=$?
+          echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
 
-      - name: Terraform Apply (Only on Main)
-        if: github.ref == 'refs/heads/main'
-        run: terraform apply -auto-approve -var="env=prod"
+          if [ $exitcode -eq 1 ]; then
+            echo "Terraform Plan FAILED"
+            exit 1
+          fi
+          # If exitcode=2 => changes exist
+          # If exitcode=0 => no changes
 
-      - name: Terraform Apply (Only on Dev)
-        if: github.ref == 'refs/heads/dev'
-        run: terraform apply -auto-approve -var="env=dev"
+      - name: Save Terraform Plan Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: tfplan
+          path: tfplan
+          retention-days: 7
+
+      - name: Capture Plan Output for Summary
+        id: planstring
+        shell: bash
+        run: |
+          if [ -f tfplan ]; then
+            # Show the plan. we do 'terraform show' on the plan file:
+            PLAN_OUTPUT="$(terraform show -no-color tfplan)"
+          else
+            # If plan file not found, skip or do something
+            PLAN_OUTPUT="(No tfplan file found.)"
+          fi
+
+          # We'll store this in step output so we can reference it below
+          # Remember to properly handle multi-line:
+          echo "planstring<<EOF" >> $GITHUB_OUTPUT
+          echo "$PLAN_OUTPUT"      >> $GITHUB_OUTPUT
+          echo "EOF"               >> $GITHUB_OUTPUT
+
+      - name: Print Plan to GitHub Summary
+        if: always()    # We always want to see it
+        run: |
+          # Gather plan from step output
+          echo "## Terraform Plan Output" >> $GITHUB_STEP_SUMMARY
+          echo "<details><summary>Click to expand</summary>" >> $GITHUB_STEP_SUMMARY
+          echo '```terraform' >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.planstring.outputs.planstring }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "</details>" >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment plan on PR (if PR event)
+        # Only comment if we are in a PR, i.e. `github.event_name == 'pull_request'`
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const planOutput = `## Terraform Plan
+              <details><summary>Expand</summary>
+
+              \`\`\`terraform
+              ${{ steps.planstring.outputs.planstring }}
+              \`\`\`
+              </details>
+              `
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: planOutput
+            })
+
+  # If you want a "manual apply" step:
+  terraform-apply:
+    # This job depends on the plan job
+    needs: terraform-plan
+    runs-on: ubuntu-latest
+    # Only run if triggered manually
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      # Optional Azure OIDC login again if needed
+      - name: Azure Login (OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          enable-oidc: true
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v3
+        with:
+          name: tfplan
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan

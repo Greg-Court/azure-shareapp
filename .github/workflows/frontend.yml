@@ -38,4 +38,4 @@ jobs:
           action: "upload"
           app_location: "frontend"
           output_location: "frontend/build"
-          environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+          deployment_environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
