@@ -9,30 +9,38 @@ on:
     branches:
       - main
       - dev
-  workflow_dispatch: # allows manual triggers
+  workflow_dispatch: # Allows manual triggers
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write  # Required to post PR comments
 
 jobs:
   terraform-plan:
     runs-on: ubuntu-latest
 
-    # We'll store plan exit code, plan artifact name, etc. as outputs
     outputs:
       plan-exitcode: ${{ steps.tf-plan.outputs.exitcode }}
+
+    env:
+      TF_VAR_env: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_USE_OIDC: "true"
+      ARM_SKIP_PROVIDER_REGISTRATION: "true"
 
     steps:
       - name: Check out code
         uses: actions/checkout@v4
 
-      # Optional: If you are using Azure resources and want OIDC:
       - name: Azure Login (OIDC)
         uses: azure/login@v1
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          enable-oidc: true
-          # For personal repos, ensure you have configured an Azure Federated Identity Credential
-          # See: https://learn.microsoft.com/azure/developer/github/connect-from-azure?tabs=azure-portal%2Clinux
+          client-id: ${{ env.ARM_CLIENT_ID }}
+          tenant-id: ${{ env.ARM_TENANT_ID }}
+          subscription-id: ${{ env.ARM_SUBSCRIPTION_ID }}
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
@@ -48,23 +56,17 @@ jobs:
       - name: Terraform Plan
         id: tf-plan
         run: |
-          # We do a "detailed exitcode" plan so that:
-          #  - 0 => No changes
-          #  - 2 => Changes
-          #  - 1 => Failure
           exitcode=0
-          terraform plan -detailed-exitcode -no-color -out=tfplan -var="env=${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}" || exitcode=$?
+          terraform plan -detailed-exitcode -no-color -out=tfplan -var="env=${TF_VAR_env}" || exitcode=$?
           echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
 
           if [ $exitcode -eq 1 ]; then
             echo "Terraform Plan FAILED"
             exit 1
           fi
-          # If exitcode=2 => changes exist
-          # If exitcode=0 => no changes
 
       - name: Save Terraform Plan Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: tfplan
           path: tfplan
@@ -75,23 +77,18 @@ jobs:
         shell: bash
         run: |
           if [ -f tfplan ]; then
-            # Show the plan. we do 'terraform show' on the plan file:
             PLAN_OUTPUT="$(terraform show -no-color tfplan)"
           else
-            # If plan file not found, skip or do something
             PLAN_OUTPUT="(No tfplan file found.)"
           fi
 
-          # We'll store this in step output so we can reference it below
-          # Remember to properly handle multi-line:
           echo "planstring<<EOF" >> $GITHUB_OUTPUT
-          echo "$PLAN_OUTPUT"      >> $GITHUB_OUTPUT
-          echo "EOF"               >> $GITHUB_OUTPUT
+          echo "$PLAN_OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Print Plan to GitHub Summary
-        if: always()    # We always want to see it
+        if: always()
         run: |
-          # Gather plan from step output
           echo "## Terraform Plan Output" >> $GITHUB_STEP_SUMMARY
           echo "<details><summary>Click to expand</summary>" >> $GITHUB_STEP_SUMMARY
           echo '```terraform' >> $GITHUB_STEP_SUMMARY
@@ -99,39 +96,50 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "</details>" >> $GITHUB_STEP_SUMMARY
 
-      - name: Comment plan on PR (if PR event)
-        # Only comment if we are in a PR, i.e. `github.event_name == 'pull_request'`
+      - name: Post Plan to PR (if PR event)
         if: ${{ github.event_name == 'pull_request' }}
         uses: actions/github-script@v7
+        env:
+          SUMMARY: ${{ steps.planstring.outputs.summary }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const planOutput = `## Terraform Plan
-              <details><summary>Expand</summary>
-
-              \`\`\`terraform
-              ${{ steps.planstring.outputs.planstring }}
-              \`\`\`
-              </details>
-              `
+            const body = process.env.SUMMARY;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: planOutput
+              body: body
             })
 
-  # If you want a "manual apply" step:
   terraform-apply:
-    # This job depends on the plan job
     needs: terraform-plan
     runs-on: ubuntu-latest
-    # Only run if triggered manually
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' # Only run manually
+
+    environment: ${{ github.ref == 'refs/heads/main' && 'prod-apply' || 'dev-apply' }}  # Manual gating
+
+    env:
+      TF_VAR_env: ${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}
+      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_USE_OIDC: "true"
+      ARM_SKIP_PROVIDER_REGISTRATION: "true"
 
     steps:
+      - name: (Manual Approval Required) Wait for Approval
+        run: echo "Waiting for environment approval..."
+
       - name: Check out code
         uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ env.ARM_CLIENT_ID }}
+          tenant-id: ${{ env.ARM_TENANT_ID }}
+          subscription-id: ${{ env.ARM_SUBSCRIPTION_ID }}
 
       - name: Install Terraform
         uses: hashicorp/setup-terraform@v3
@@ -139,7 +147,7 @@ jobs:
           terraform_version: 1.6.0
 
       - name: Download Terraform Plan
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: tfplan
 
