@@ -1,7 +1,9 @@
 terraform {
   backend "azurerm" {
+    resource_group_name  = "rg-mgmt-uks-01"
     storage_account_name = "sagregmgmtuks01"
     use_azuread_auth     = true
+    container_name       = "tfstate"
   }
 
   required_version = ">= 1.3.0"

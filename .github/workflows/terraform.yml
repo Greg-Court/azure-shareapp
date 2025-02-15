@@ -48,7 +48,9 @@ jobs:
           terraform_version: 1.6.0
 
       - name: Terraform Init
-        run: terraform init
+        run: |
+          terraform init \
+          -backend-config="key=shareapp-${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}.tfstate"
 
       - name: Terraform Validate
         run: terraform validate
@@ -147,6 +149,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: tfplan
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+          -backend-config="key=shareapp-${{ github.ref == 'refs/heads/main' && 'prod' || 'dev' }}.tfstate"
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
