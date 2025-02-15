@@ -80,11 +80,11 @@ resource "azapi_resource" "function_app" {
       functionAppConfig = {
         runtime = {
           name    = "node"
-          version = "18"
+          version = "20"
         }
         scaleAndConcurrency = {
           instanceMemoryMB     = 2048
-          maximumInstanceCount = 3
+          maximumInstanceCount = 40
         }
         deployment = {
           storage = {
@@ -100,10 +100,6 @@ resource "azapi_resource" "function_app" {
       # siteConfig is where we add environment variables (app settings)
       siteConfig = {
         appSettings = [
-          {
-            name  = "FUNCTIONS_WORKER_RUNTIME"
-            value = "node"
-          },
           {
             name  = "WEBSITE_RUN_FROM_PACKAGE"
             value = "1"
@@ -127,9 +123,9 @@ resource "azurerm_role_assignment" "allow_blob_access" {
   scope                = azurerm_storage_account.func.id
   role_definition_name = "Storage Blob Data Owner"
 
-  principal_id = jsondecode(azapi_resource.function_app.output)["identity"]["principalId"]
+  principal_id = azapi_resource.function_app.output["identity"]["principalId"]
 }
 
 locals {
-  function_app_hostname = jsondecode(azapi_resource.function_app.output)["properties"]["defaultHostName"]
+  function_app_hostname = azapi_resource.function_app.output["properties"]["defaultHostName"]
 }
