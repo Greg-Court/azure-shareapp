@@ -5,13 +5,11 @@ resource "azurerm_cosmosdb_account" "main" {
   offer_type          = "Standard"
   kind                = "GlobalDocumentDB"
 
-  # Enable serverless
   capabilities {
     name = "EnableServerless"
   }
 
-  # Enable free tier (if allowed in subscription)
-  # enable_free_tier = true
+  enable_free_tier = true
 
   consistency_policy {
     consistency_level = "Session"
@@ -21,14 +19,8 @@ resource "azurerm_cosmosdb_account" "main" {
     location          = var.location
     failover_priority = 0
   }
-
-  # ✅ Enable Virtual Network Filtering (so only allowed networks can access it)
   is_virtual_network_filter_enabled = true
-
-  # ✅ Public network access (must be disabled if using only subnets)
-  public_network_access_enabled = false # Set to true if you want IP-based access
-
-  # ✅ Define subnet access (REQUIRED since IP rules aren't allowed)
+  public_network_access_enabled = false
   virtual_network_rule {
     id = azurerm_subnet.cosmos.id
   }
@@ -49,6 +41,5 @@ resource "azurerm_cosmosdb_sql_container" "files" {
   database_name       = azurerm_cosmosdb_sql_database.db.name
   partition_key_paths = ["/id"]
 
-  # For serverless, do not specify throughput
   depends_on = [azurerm_cosmosdb_sql_database.db]
 }
