@@ -6,13 +6,14 @@ resource "azurerm_storage_account" "main" {
   account_replication_type = "LRS"
   account_kind             = "StorageV2"
   tags                     = var.tags
+  public_network_access_enabled = true # temp
 
   network_rules {
     default_action = "Deny"
     bypass         = ["AzureServices"]
     ip_rules       = [local.my_public_ip]
     virtual_network_subnet_ids = [
-      azurerm_subnet.subnet_storage.id
+      azurerm_subnet.storage.id
     ]
   }
 }

@@ -19,20 +19,19 @@ variable "location" {
 variable "project_name" {
   type        = string
   description = "Short name for the project"
-  default     = "fileshare"
+  default     = "shareapp"
 }
 
-variable "b2c_tenant_id" {
-  type        = string
-  description = "Azure B2C tenant ID (GUID) if required for AD provider."
-  default     = ""
-}
+# variable "b2c_tenant_id" {
+#   type        = string
+#   description = "Azure B2C tenant ID (GUID) if required for AD provider."
+#   default     = ""
+# }
 
 variable "tags" {
   type        = map(string)
   description = "Common tags for all resources"
   default = {
     environment = "dev"
-    project     = "fileshare"
   }
 }

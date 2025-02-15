@@ -30,7 +30,7 @@ resource "azurerm_cosmosdb_account" "main" {
 
   # ✅ Define subnet access (REQUIRED since IP rules aren't allowed)
   virtual_network_rule {
-    id = azurerm_subnet.subnet_cosmos.id
+    id = azurerm_subnet.cosmos.id
   }
 
   tags = var.tags

@@ -27,17 +27,22 @@ resource "azurerm_service_plan" "functions_plan" {
 
 # 3) Storage Account (for function code + azurewebjobsstorage)
 resource "azurerm_storage_account" "func" {
-  name                     = "st${var.project_name}${var.env}${var.loc}01"
+  name                     = "stfunc${var.project_name}${var.env}${var.loc}01"
   resource_group_name      = azurerm_resource_group.main.name
   location                 = var.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
   account_kind             = "StorageV2"
+  public_network_access_enabled = true # temp
 
   network_rules {
     # If you want to lock down further, set default_action = "Deny"
-    default_action = "Allow"
+    default_action = "Deny"
     bypass         = ["AzureServices"]
+    ip_rules       = [local.my_public_ip]
+    virtual_network_subnet_ids = [
+      azurerm_subnet.functions.id
+    ]
   }
 
   tags = {
