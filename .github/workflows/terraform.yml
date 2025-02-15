@@ -9,12 +9,12 @@ on:
     branches:
       - main
       - dev
-  workflow_dispatch: # Allows manual triggers
+  workflow_dispatch:
 
 permissions:
   contents: read
   id-token: write
-  pull-requests: write  # Required to post PR comments
+  pull-requests: write
 
 jobs:
   terraform-plan:
