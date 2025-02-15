@@ -1,11 +1,11 @@
 resource "azurerm_storage_account" "main" {
-  name                     = "st${var.project_name}${var.env}${var.loc}01"
-  resource_group_name      = azurerm_resource_group.main.name
-  location                 = var.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-  account_kind             = "StorageV2"
-  tags                     = var.tags
+  name                          = "st${var.project_name}${var.env}${var.loc}01"
+  resource_group_name           = azurerm_resource_group.main.name
+  location                      = var.location
+  account_tier                  = "Standard"
+  account_replication_type      = "LRS"
+  account_kind                  = "StorageV2"
+  tags                          = var.tags
   public_network_access_enabled = true # temp
 
   network_rules {

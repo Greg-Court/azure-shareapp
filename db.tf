@@ -20,7 +20,7 @@ resource "azurerm_cosmosdb_account" "main" {
     failover_priority = 0
   }
   is_virtual_network_filter_enabled = true
-  public_network_access_enabled = false
+  public_network_access_enabled     = false
   virtual_network_rule {
     id = azurerm_subnet.cosmos.id
   }
