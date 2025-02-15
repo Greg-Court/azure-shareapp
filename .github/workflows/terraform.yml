@@ -73,29 +73,28 @@ jobs:
           path: tfplan
           retention-days: 7
 
-      - name: Capture Plan Output for Summary
+      - name: Create Plan String
         id: planstring
-        shell: bash
+        working-directory: terraform
         run: |
-          if [ -f tfplan ]; then
-            PLAN_OUTPUT="$(terraform show -no-color tfplan)"
-          else
-            PLAN_OUTPUT="(No tfplan file found.)"
-          fi
+          PLAN_CONTENT=$(terraform show -no-color prod.tfplan)
 
-          echo "planstring<<EOF" >> $GITHUB_OUTPUT
-          echo "$PLAN_OUTPUT" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Print Plan to GitHub Summary
-        if: always()
-        run: |
-          echo "## Terraform Plan Output" >> $GITHUB_STEP_SUMMARY
-          echo "<details><summary>Click to expand</summary>" >> $GITHUB_STEP_SUMMARY
-          echo '```terraform' >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.planstring.outputs.planstring }}" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "</details>" >> $GITHUB_STEP_SUMMARY
+          # Use a random delimiter so we don't prematurely close the output
+          delimiter="$(openssl rand -hex 8)"
+          echo "summary<<${delimiter}" >> $GITHUB_OUTPUT
+          echo "## Terraform Plan Output" >> $GITHUB_OUTPUT
+          echo "<details><summary>Click to expand</summary>" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo '```terraform' >> $GITHUB_OUTPUT
+          echo "$PLAN_CONTENT" >> $GITHUB_OUTPUT
+          echo '```' >> $GITHUB_OUTPUT
+          echo "</details>" >> $GITHUB_OUTPUT
+          echo "${delimiter}" >> $GITHUB_OUTPUT
+  
+      - name: Publish Terraform Plan to Task Summary
+        env:
+          SUMMARY: ${{ steps.planstring.outputs.summary }}
+        run: echo "$SUMMARY" >> $GITHUB_STEP_SUMMARY
 
       - name: Post Plan to PR (if PR event)
         if: ${{ github.event_name == 'pull_request' }}
