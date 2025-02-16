@@ -35,7 +35,7 @@ resource "azurerm_storage_account" "func" {
   public_network_access_enabled = true # temp
 
   network_rules {
-    default_action = "Deny"
+    default_action = "Allow" # temp
     bypass         = ["AzureServices"]
     ip_rules       = [local.my_public_ip]
     virtual_network_subnet_ids = [
