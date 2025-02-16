@@ -12,13 +12,6 @@ resource "azurerm_subnet" "functions" {
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = ["10.0.1.0/24"]
   service_endpoints    = ["Microsoft.Storage", "Microsoft.AzureCosmosDB"]
-  delegation {
-    name = "functionDelegation"
-    service_delegation {
-      name    = "Microsoft.Web/serverFarms"
-      actions = ["Microsoft.Network/virtualNetworks/subnets/action"]
-    }
-  }
 }
 
 # If private endpoints added in the future

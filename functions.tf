@@ -70,8 +70,7 @@ resource "azapi_resource" "function_app" {
     }
     properties = {
       serverFarmId = azurerm_service_plan.functions_plan.id
-      virtualNetworkSubnetId = azurerm_subnet.functions.id
-      
+
       functionAppConfig = {
         runtime = {
           name    = "node"
@@ -83,10 +82,10 @@ resource "azapi_resource" "function_app" {
         }
         deployment = {
           storage = {
-            type  = "blobContainer"
+            type  = "blobcontainer"
             value = "${azurerm_storage_account.func.primary_blob_endpoint}${azurerm_storage_container.deploy_container.name}"
             authentication = {
-              type = "SystemAssignedIdentity"
+              type = "systemassignedidentity"
             }
           }
         }
