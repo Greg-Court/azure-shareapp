@@ -4,3 +4,4 @@
 - Deployment gate requiring approval for apply
 - Separate function deployment pipelines
 - If plan is empty do not run apply
+-
