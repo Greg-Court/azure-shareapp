@@ -70,6 +70,7 @@ resource "azapi_resource" "function_app" {
     }
     properties = {
       serverFarmId = azurerm_service_plan.functions_plan.id
+      virtualNetworkSubnetId = azurerm_subnet.functions.id
 
       functionAppConfig = {
         runtime = {
