@@ -1,0 +1,5 @@
+- CI pipeline triggered on PRs (terraform fmt, terraform validate, tfsec, tflint, and terraform plan)
+  - Require approver review terraform plan output before mergign
+- No pushes directly to main
+- Deployment gate requiring approval for apply
+- Separate function deployment pipelines

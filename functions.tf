@@ -113,12 +113,13 @@ resource "azapi_resource" "function_app" {
   }
 }
 
-resource "azurerm_role_assignment" "allow_blob_access" {
-  scope                = azurerm_storage_account.func.id
-  role_definition_name = "Storage Blob Data Owner"
+# assign manually, leaving here for reference
+# resource "azurerm_role_assignment" "allow_blob_access" {
+#   scope                = azurerm_storage_account.func.id
+#   role_definition_name = "Storage Blob Data Owner"
 
-  principal_id = azapi_resource.function_app.output["identity"]["principalId"]
-}
+#   principal_id = azapi_resource.function_app.output["identity"]["principalId"]
+# }
 
 locals {
   function_app_hostname = azapi_resource.function_app.output["properties"]["defaultHostName"]
