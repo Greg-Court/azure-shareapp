@@ -19,7 +19,7 @@ variable "location" {
 variable "project_name" {
   type        = string
   description = "Short name for the project"
-  default     = "az-ai-reviews"
+  default     = "shareapp"
 }
 
 # variable "b2c_tenant_id" {
